@@ -109,7 +109,7 @@ class App extends React.Component<any, object> {
         selectedTagIndex: 0,
         selectedBranchName: 'master',
         specifiedCommitHash: '',
-        versionComparison: PackageVersionSelectorType.VersionsEqual,
+        versionComparison: PackageVersionComparisonType.VersionsEqual,
       };
       bsPackages.push(bsPackage);
       this.props.addPackage(bsPackage);
@@ -146,28 +146,21 @@ class App extends React.Component<any, object> {
         const currentVersionSemverFormat = currentVersion.substring(1);
         if (semver.valid(currentVersionSemverFormat) && semver.valid(specifiedBsPackageVersion)) {
           if (semver.gt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
-            // current version greater than specified version
-            myColor = 'gold';
-            bsPackage.versionComparison = PackageVersionSelectorType.CurrentNewer;
+            bsPackage.versionComparison = PackageVersionComparisonType.CurrentNewer;
 
           }
           else if (semver.lt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
-            // specified version is greater than current version
-            myColor = 'red';
-            bsPackage.versionComparison = PackageVersionSelectorType.SpecifiedNewer;
+            bsPackage.versionComparison = PackageVersionComparisonType.SpecifiedNewer;
           }
           else {
-            // versions match
-            myColor = 'green';
-            bsPackage.versionComparison = PackageVersionSelectorType.VersionsEqual;
+            bsPackage.versionComparison = PackageVersionComparisonType.VersionsEqual;
           }
         }
       }
       else {
-        bsPackage.versionComparison = PackageVersionSelectorType.CurrentNotTagged;
+        bsPackage.versionComparison = PackageVersionComparisonType.CurrentNotTagged;
       }
       console.log(bsPackage);
-      // console.log(myColor);
 
       // get the last n commits on the current branch for this package
       // currentBranch=$(git branch | grep \* | cut -d ' ' -f2)
@@ -440,11 +433,28 @@ class App extends React.Component<any, object> {
       compatiblePackageDotJsonVersion = 'n/a';
     }
 
+    let comparisonColor: string;
+    switch (bsPackage.versionComparison) {
+      case PackageVersionComparisonType.VersionsEqual: {
+        comparisonColor = 'green';
+        break;
+      }
+      case PackageVersionComparisonType.CurrentNewer: {
+        comparisonColor = 'gold';
+        break;
+      }
+      default:
+      case PackageVersionComparisonType.CurrentNotTagged:
+      case PackageVersionComparisonType.SpecifiedNewer: {
+        comparisonColor = 'red';
+        break;
+      }
+    }
     return (
       <TableRow key={bsPackage.name}>
         <TableRowColumn
           style={{
-            color: 'red',
+            color: comparisonColor,
           }}>
           {bsPackage.name}
         </TableRowColumn>
