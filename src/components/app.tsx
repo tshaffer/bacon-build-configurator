@@ -50,23 +50,23 @@ class App extends React.Component<any, object> {
     // specify packages
     this.packageNames.push('ba-context-model');
     this.packageNames.push('ba-schedule');
-    this.packageNames.push('ba-uw-dm');
-    this.packageNames.push('ba-uw-manager');
-    this.packageNames.push('bacon-theme');
-    this.packageNames.push('baconcore');
-    this.packageNames.push('bpfimporter');
+    // this.packageNames.push('ba-uw-dm');
+    // this.packageNames.push('ba-uw-manager');
+    // this.packageNames.push('bacon-theme');
+    // this.packageNames.push('baconcore');
+    // this.packageNames.push('bpfimporter');
     this.packageNames.push('bs-content-manager');
-    this.packageNames.push('bs-device-artifacts');
-    this.packageNames.push('bs-playlist-dm');
-    this.packageNames.push('bs-widgets');
-    this.packageNames.push('bscore');
-    this.packageNames.push('bsdatamodel');
-    this.packageNames.push('bsdevicesetup');
-    // this.packageNames.push('bsn-ui-v2-ns');
-    this.packageNames.push('bsnconnector');
-    this.packageNames.push('bspublisher');
-    this.packageNames.push('fsconnector');
-    this.packageNames.push('fsmetadata');
+    // this.packageNames.push('bs-device-artifacts');
+    // this.packageNames.push('bs-playlist-dm');
+    // this.packageNames.push('bs-widgets');
+    // this.packageNames.push('bscore');
+    // this.packageNames.push('bsdatamodel');
+    // this.packageNames.push('bsdevicesetup');
+    // // this.packageNames.push('bsn-ui-v2-ns');
+    // this.packageNames.push('bsnconnector');
+    // this.packageNames.push('bspublisher');
+    // this.packageNames.push('fsconnector');
+    // this.packageNames.push('fsmetadata');
 
     this.setPackageVersionSelector = this.setPackageVersionSelector.bind(this);
     this.selectTag = this.selectTag.bind(this);
@@ -425,7 +425,7 @@ class App extends React.Component<any, object> {
 
     const self: any = this;
 
-    const tagValue = bsPackage.name + ':' + bsPackage.selectedTagIndex.toString();
+    let tagValue = bsPackage.name + ':' + bsPackage.selectedTagIndex.toString();
 
     let compatiblePackageDotJsonVersion: string = this.getCompatiblePackageDotJsonVersion(bsPackage);
     const disabled: boolean = compatiblePackageDotJsonVersion === '';
@@ -434,6 +434,7 @@ class App extends React.Component<any, object> {
     }
 
     let comparisonColor: string;
+    let defaultSelectedPackage = bsPackage.name + ':' + PackageVersionSelectorType.Current;
     switch (bsPackage.versionComparison) {
       case PackageVersionComparisonType.VersionsEqual: {
         comparisonColor = 'green';
@@ -447,9 +448,21 @@ class App extends React.Component<any, object> {
       case PackageVersionComparisonType.CurrentNotTagged:
       case PackageVersionComparisonType.SpecifiedNewer: {
         comparisonColor = 'red';
+
+        // find matching tag
+        const tags = bsPackage.tags;
+        tags.forEach( (tag, index) => {
+          const tagName = tag.name;
+          if (tagName.substr(1) === bsPackage.packageDotJsonSpecifiedPackage.version) {
+            tagValue = bsPackage.name + ':' + index.toString();
+            defaultSelectedPackage = bsPackage.name + ':' + PackageVersionSelectorType.Tag;
+            return;
+          }
+        });
         break;
       }
     }
+
     return (
       <TableRow key={bsPackage.name}>
         <TableRowColumn
@@ -467,7 +480,7 @@ class App extends React.Component<any, object> {
         <TableRowColumn>
           <RadioButtonGroup
             name='packageIdType'
-            defaultSelected={bsPackage.name + ':' + PackageVersionSelectorType.Current}
+            defaultSelected={defaultSelectedPackage}
             onChange={self.setPackageVersionSelector}
           >
             <RadioButton
