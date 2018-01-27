@@ -19,6 +19,7 @@ export interface BsPackage {
   selectedTagIndex: number;
   selectedBranchName: string;
   specifiedCommitHash: string;
+  versionComparison: PackageVersionComparisonType;
 }
 
 export interface SpecifiedBsPackage {
@@ -39,3 +40,11 @@ export class PackageVersionSelectorType {
   static Current = 'current';
 }
 Object.freeze(PackageVersionSelectorType);
+
+export class PackageVersionComparisonType {
+  static VersionsEqual = 'equal';
+  static CurrentNewer = 'currentNewer';
+  static SpecifiedNewer = 'specifiedNewer';
+  static CurrentNotTagged = 'currentNotTagged';
+}
+Object.freeze(PackageVersionComparisonType);

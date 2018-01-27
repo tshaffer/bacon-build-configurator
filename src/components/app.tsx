@@ -30,6 +30,7 @@ import {
 import {
   BsPackage,
   BsTag,
+  PackageVersionComparisonType,
   PackageVersionSelectorType,
   RecentCommitData,
   SpecifiedBsPackage,
@@ -38,13 +39,16 @@ import {
 
 class App extends React.Component<any, object> {
 
-  packageBaseDir: string = '/Users/tedshaffer/Documents/Projects/bacon-comp/';
+  // packageBaseDir: string = '/Users/tedshaffer/Documents/Projects/bacon-comp/';
+  // packageBaseDir: string = '/Users/tedshaffer/Documents/AltProjects/bacon-comp/';
+  packageBaseDir: string = '/Users/tedshaffer/Documents/bacon-comp/';
   packageNames: string[] = [];
 
   constructor(props: any){
     super(props);
 
     // specify packages
+    this.packageNames.push('ba-context-model');
     this.packageNames.push('ba-schedule');
     this.packageNames.push('ba-uw-dm');
     this.packageNames.push('ba-uw-manager');
@@ -80,12 +84,15 @@ class App extends React.Component<any, object> {
 
     this.packageNames.forEach((packageName) => {
 
-      console.log('processing ', packageName);
+      console.log('Retrieving info for ', packageName);
 
       const packagePath = this.packageBaseDir.concat(packageName);
 
       shell.cd(packagePath);
       shell.pwd();
+
+      // perform git fetch on the branch so that all the tags are local
+      const gitFetchCmd: string = shell.exec('git fetch').stdout;
 
       const bsTags: BsTag[] = this.getTags();
 
@@ -102,6 +109,7 @@ class App extends React.Component<any, object> {
         selectedTagIndex: 0,
         selectedBranchName: 'master',
         specifiedCommitHash: '',
+        versionComparison: PackageVersionSelectorType.VersionsEqual,
       };
       bsPackages.push(bsPackage);
       this.props.addPackage(bsPackage);
@@ -133,7 +141,33 @@ class App extends React.Component<any, object> {
         });
       }
 
+      // determine status of package by comparing current vs. specified version
+      if (currentVersion.charAt(0) === 'v') {
+        const currentVersionSemverFormat = currentVersion.substring(1);
+        if (semver.valid(currentVersionSemverFormat) && semver.valid(specifiedBsPackageVersion)) {
+          if (semver.gt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
+            // current version greater than specified version
+            myColor = 'gold';
+            bsPackage.versionComparison = PackageVersionSelectorType.CurrentNewer;
+
+          }
+          else if (semver.lt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
+            // specified version is greater than current version
+            myColor = 'red';
+            bsPackage.versionComparison = PackageVersionSelectorType.SpecifiedNewer;
+          }
+          else {
+            // versions match
+            myColor = 'green';
+            bsPackage.versionComparison = PackageVersionSelectorType.VersionsEqual;
+          }
+        }
+      }
+      else {
+        bsPackage.versionComparison = PackageVersionSelectorType.CurrentNotTagged;
+      }
       console.log(bsPackage);
+      // console.log(myColor);
 
       // get the last n commits on the current branch for this package
       // currentBranch=$(git branch | grep \* | cut -d ' ' -f2)
@@ -350,11 +384,14 @@ class App extends React.Component<any, object> {
 
         if (checkoutSpecifier !== '') {
           const gitCheckoutOutput: shell.ExecOutputReturnValue = shell.exec('git checkout ' + checkoutSpecifier);
+
+          console.log('gitCheckout results for: ', bsPackage.name);
           if (gitCheckoutOutput.stderr !== '') {
-            alert(gitCheckoutOutput.stderr);
+            console.log('STDERR');
+            console.log(gitCheckoutOutput.stderr);
           }
           else {
-            console.log('gitCheckoutOutput: ', gitCheckoutOutput.stdout);
+            console.log(gitCheckoutOutput.stdout);
           }
         }
       }
@@ -405,7 +442,10 @@ class App extends React.Component<any, object> {
 
     return (
       <TableRow key={bsPackage.name}>
-        <TableRowColumn>
+        <TableRowColumn
+          style={{
+            color: 'red',
+          }}>
           {bsPackage.name}
         </TableRowColumn>
         <TableRowColumn>
