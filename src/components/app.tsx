@@ -423,6 +423,11 @@ class App extends React.Component<any, object> {
           if (gitCheckoutOutput.stderr !== '') {
             console.log('STDERR');
             console.log(gitCheckoutOutput.stderr);
+
+            if (gitCheckoutOutput.stderr.startsWith('error:')) {
+              alert(bsPackage.name + '\n\n' + gitCheckoutOutput.stderr);
+              return;
+            }
           }
           else {
             console.log(gitCheckoutOutput.stdout);
