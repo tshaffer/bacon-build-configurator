@@ -105,9 +105,11 @@ class App extends React.Component<any, object> {
         tags: bsTags,
         packageVersionSelector: PackageVersionSelectorType.Current,
         selectedTagIndex: 0,
+        upgradeTagIndex: -1,
         selectedBranchName: 'master',
         specifiedCommitHash: '',
         versionComparison: PackageVersionComparisonType.VersionsEqual,
+        defaultChanged: false,
       };
       bsPackages.push(bsPackage);
       this.props.addPackage(bsPackage);
@@ -144,11 +146,22 @@ class App extends React.Component<any, object> {
         const currentVersionSemverFormat = currentVersion.substring(1);
         if (semver.valid(currentVersionSemverFormat) && semver.valid(specifiedBsPackageVersion)) {
           if (semver.gt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
-            bsPackage.versionComparison = PackageVersionComparisonType.CurrentNewer;
-
+            bsPackage.versionComparison = PackageVersionComparisonType.CurrentIsNewer;
           }
           else if (semver.lt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
-            bsPackage.versionComparison = PackageVersionComparisonType.SpecifiedNewer;
+            bsPackage.versionComparison = PackageVersionComparisonType.SpecifiedIsNewer;
+
+            // find tag of specified version
+            const tags = bsPackage.tags;
+            tags.forEach( (tag, index) => {
+              const tagName = tag.name;
+              if (tagName.substr(1) === bsPackage.packageDotJsonSpecifiedPackage.version) {
+                bsPackage.upgradeTagIndex = index;
+                bsPackage.packageVersionSelector = PackageVersionSelectorType.Tag;
+                return;
+              }
+            });
+
           }
           else {
             bsPackage.versionComparison = PackageVersionComparisonType.VersionsEqual;
@@ -290,28 +303,57 @@ class App extends React.Component<any, object> {
 
   }
 
+  // TODO - replace by selector
+  getBsPackageByName(packageName: string) : BsPackage {
+    const bsPackagesByPackageName: any = this.props.bsPackages.bsPackagesByPackageName;
+    for (const bsPackageName in bsPackagesByPackageName) {
+      if (bsPackagesByPackageName.hasOwnProperty(bsPackageName)) {
+        if (packageName === bsPackageName) {
+          return bsPackagesByPackageName[packageName];
+        }
+      }
+    }
+    return null;
+  }
+
+  markPackageDefaultOverriden(packageName: string) : void {
+    const selectedPackage: BsPackage = this.getBsPackageByName(packageName);
+    if (!isNil(selectedPackage)) {
+      selectedPackage.upgradeTagIndex = -1;
+      selectedPackage.defaultChanged = true;
+    }
+  }
+
   setPackageVersionSelector(event: any, value: any) {
+    console.log('setPackageVersionSelector invoked');
     const params: string[] = value.split(':');
     this.props.setPackageVersionSelector(params[0], params[1]);
+    this.markPackageDefaultOverriden(params[0]);
   }
 
   selectTag(event: any, key: number, payload: any) {
+    console.log('selectTag invoked');
     const params: string[] = payload.split(':');
     this.props.setSelectedTagIndex(params[0], Number(params[1]));
+    this.markPackageDefaultOverriden(params[0]);
   }
 
   setBranchName(event: any, newValue: string) {
+    console.log('setBranchName invoked');
     const params: string[] = event.target.id.split(':');
     const packageName: string = params[0];
     const branchName: string = newValue;
     this.props.setSelectedBranchName(packageName, branchName);
+    this.markPackageDefaultOverriden(params[0]);
   }
 
   setCommitHash(event: any, newValue: string) {
+    console.log('setCommitHash invoked');
     const params: string[] = event.target.id.split(':');
     const packageName: string = params[0];
     const commitHash: string = newValue;
     this.props.setSpecifiedCommitHash(packageName, commitHash);
+    this.markPackageDefaultOverriden(params[0]);
   }
 
   configureButtonClicked() {
@@ -331,7 +373,8 @@ class App extends React.Component<any, object> {
 
         switch (bsPackage.packageVersionSelector) {
           case PackageVersionSelectorType.Tag: {
-            const bsTag: BsTag = bsPackage.tags[bsPackage.selectedTagIndex];
+            const tagIndex = bsPackage.upgradeTagIndex > 0 ? bsPackage.upgradeTagIndex : bsPackage.selectedTagIndex;
+            const bsTag: BsTag = bsPackage.tags[tagIndex];
             checkoutSpecifier = this.getCommitHashFromCommitMessage(bsTag.commitMessage);
             console.log('commitMessage: ', checkoutSpecifier);
             break;
@@ -370,6 +413,12 @@ class App extends React.Component<any, object> {
         if (checkoutSpecifier !== '') {
           const gitCheckoutOutput: shell.ExecOutputReturnValue = shell.exec('git checkout ' + checkoutSpecifier);
 
+          /*
+           error: Your local changes to the following files would be overwritten by checkout:
+           package.json
+           Please commit your changes or stash them before you switch branches.
+           Aborting
+           */
           console.log('gitCheckout results for: ', bsPackage.name);
           if (gitCheckoutOutput.stderr !== '') {
             console.log('STDERR');
@@ -410,27 +459,30 @@ class App extends React.Component<any, object> {
 
     let tagValue = bsPackage.name + ':' + bsPackage.selectedTagIndex.toString();
 
-    let comparisonColor: string;
+    let comparisonColor: string = 'black';
     let statusColor: string = 'black';
-    let status: string;
-    let defaultSelectedPackage = bsPackage.name + ':' + PackageVersionSelectorType.Current;
+    let status: string = '';
+
+    let defaultSelectedPackage = bsPackage.name + ':' + (bsPackage.upgradeTagIndex < 0 ?
+      PackageVersionSelectorType.Current : PackageVersionSelectorType.Tag);
+
     switch (bsPackage.versionComparison) {
       case PackageVersionComparisonType.VersionsEqual: {
         comparisonColor = 'green';
         status = 'No action required';
         break;
       }
-      case PackageVersionComparisonType.CurrentNewer: {
+      case PackageVersionComparisonType.CurrentIsNewer: {
         comparisonColor = 'gold';
         status = 'Current version newer';
         break;
       }
       default:
       case PackageVersionComparisonType.CurrentNotTagged:
-      case PackageVersionComparisonType.SpecifiedNewer: {
+      case PackageVersionComparisonType.SpecifiedIsNewer: {
         comparisonColor = 'red';
 
-        // find matching tag
+        // find tag of specified version
         let matchingTagFound = false;
         const tags = bsPackage.tags;
         tags.forEach( (tag, index) => {
@@ -450,6 +502,11 @@ class App extends React.Component<any, object> {
         }
         break;
       }
+    }
+
+    if (bsPackage.defaultChanged) {
+      status = '** default overridden';
+      statusColor = 'orange';
     }
 
     return (

@@ -17,9 +17,11 @@ export interface BsPackage {
   tagIndexForPackageDotJsonPackageVersion?: number;
   packageVersionSelector: PackageVersionSelectorType;
   selectedTagIndex: number;
+  upgradeTagIndex: number;
   selectedBranchName: string;
   specifiedCommitHash: string;
   versionComparison: PackageVersionComparisonType;
+  defaultChanged: boolean;
 }
 
 export interface SpecifiedBsPackage {
@@ -43,8 +45,8 @@ Object.freeze(PackageVersionSelectorType);
 
 export class PackageVersionComparisonType {
   static VersionsEqual = 'equal';
-  static CurrentNewer = 'currentNewer';
-  static SpecifiedNewer = 'specifiedNewer';
+  static CurrentIsNewer = 'currentNewer';
+  static SpecifiedIsNewer = 'specifiedNewer';
   static CurrentNotTagged = 'currentNotTagged';
 }
 Object.freeze(PackageVersionComparisonType);
