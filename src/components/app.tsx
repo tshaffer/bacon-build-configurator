@@ -247,9 +247,6 @@ class App extends React.Component<any, object> {
     return commitMessage.substr(7, 40);
   }
 
-  // get all tags for the active branch
-  //    tag name
-  //    commitMessage
   getTags() {
 
     const rawTags: any = shell.exec('git tag');
@@ -279,7 +276,7 @@ class App extends React.Component<any, object> {
         commitHash = commitHash.trim();
       }
 
-      // commitInfo=$(git log -1 $commitHash)
+      // commitInfo = $(git log -1 $commitHash)
       const gitLogCmd: string = 'git log -1 ' + commitHash;
       const commitInfo: string = shell.exec(gitLogCmd).stdout;
 
@@ -413,12 +410,6 @@ class App extends React.Component<any, object> {
         if (checkoutSpecifier !== '') {
           const gitCheckoutOutput: shell.ExecOutputReturnValue = shell.exec('git checkout ' + checkoutSpecifier);
 
-          /*
-           error: Your local changes to the following files would be overwritten by checkout:
-           package.json
-           Please commit your changes or stash them before you switch branches.
-           Aborting
-           */
           console.log('gitCheckout results for: ', bsPackage.name);
           if (gitCheckoutOutput.stderr !== '') {
             console.log('STDERR');
