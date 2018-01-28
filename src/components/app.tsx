@@ -48,23 +48,23 @@ class App extends React.Component<any, object> {
     // specify packages
     this.packageNames.push('ba-context-model');
     this.packageNames.push('ba-schedule');
-    // this.packageNames.push('ba-uw-dm');
-    // this.packageNames.push('ba-uw-manager');
-    // this.packageNames.push('bacon-theme');
-    // this.packageNames.push('baconcore');
-    // this.packageNames.push('bpfimporter');
+    this.packageNames.push('ba-uw-dm');
+    this.packageNames.push('ba-uw-manager');
+    this.packageNames.push('bacon-theme');
+    this.packageNames.push('baconcore');
+    this.packageNames.push('bpfimporter');
     this.packageNames.push('bs-content-manager');
-    // this.packageNames.push('bs-device-artifacts');
-    // this.packageNames.push('bs-playlist-dm');
-    // this.packageNames.push('bs-widgets');
-    // this.packageNames.push('bscore');
-    // this.packageNames.push('bsdatamodel');
-    // this.packageNames.push('bsdevicesetup');
-    // // this.packageNames.push('bsn-ui-v2-ns');
-    // this.packageNames.push('bsnconnector');
-    // this.packageNames.push('bspublisher');
-    // this.packageNames.push('fsconnector');
-    // this.packageNames.push('fsmetadata');
+    this.packageNames.push('bs-device-artifacts');
+    this.packageNames.push('bs-playlist-dm');
+    this.packageNames.push('bs-widgets');
+    this.packageNames.push('bscore');
+    this.packageNames.push('bsdatamodel');
+    this.packageNames.push('bsdevicesetup');
+    // this.packageNames.push('bsn-ui-v2-ns');
+    this.packageNames.push('bsnconnector');
+    this.packageNames.push('bspublisher');
+    this.packageNames.push('fsconnector');
+    this.packageNames.push('fsmetadata');
 
     this.setPackageVersionSelector = this.setPackageVersionSelector.bind(this);
     this.selectTag = this.selectTag.bind(this);
@@ -120,16 +120,13 @@ class App extends React.Component<any, object> {
       if (semver.valid(specifiedBsPackageVersion)) {
         bsTags.forEach((tag: BsTag, tagIndex) => {
           const tagName = tag.name;
-          const packageVersionForTag = tagName.substr(1);
 
-          if (semver.valid(packageVersionForTag)) {
-            if (semver.intersects(specifiedBsPackageVersion, packageVersionForTag)) {
+          if (semver.valid(tagName)) {
+            if (semver.intersects(specifiedBsPackageVersion, tagName)) {
               // if a compatible package has already been found, use the higher numbered package
               if (!isNil(bsPackage.tagIndexForPackageDotJsonPackageVersion)) {
                 const tagIndexForPackageDotJsonPackageVersion = bsPackage.tagIndexForPackageDotJsonPackageVersion;
-                const tagForPackageDotJsonPackageVersion = bsTags[tagIndexForPackageDotJsonPackageVersion];
-                const packageDotJsonPackageVersion = tagForPackageDotJsonPackageVersion.name.substr(1);
-                if (semver.gt(packageVersionForTag, packageDotJsonPackageVersion)) {
+                if (semver.gt(tagName, bsTags[tagIndexForPackageDotJsonPackageVersion].name)) {
                   bsPackage.tagIndexForPackageDotJsonPackageVersion = tagIndex;
                 }
               }
@@ -143,19 +140,17 @@ class App extends React.Component<any, object> {
 
       // determine status of package by comparing current vs. specified version
       if (currentVersion.charAt(0) === 'v') {
-        const currentVersionSemverFormat = currentVersion.substring(1);
-        if (semver.valid(currentVersionSemverFormat) && semver.valid(specifiedBsPackageVersion)) {
-          if (semver.gt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
+        if (semver.valid(currentVersion) && semver.valid(specifiedBsPackageVersion)) {
+          if (semver.gt(currentVersion, specifiedBsPackageVersion)) {
             bsPackage.versionComparison = PackageVersionComparisonType.CurrentIsNewer;
           }
-          else if (semver.lt(currentVersionSemverFormat, specifiedBsPackageVersion)) {
+          else if (semver.lt(currentVersion, specifiedBsPackageVersion)) {
             bsPackage.versionComparison = PackageVersionComparisonType.SpecifiedIsNewer;
 
             // find tag of specified version
             const tags = bsPackage.tags;
             tags.forEach( (tag, index) => {
-              const tagName = tag.name;
-              if (tagName.substr(1) === bsPackage.packageDotJsonSpecifiedPackage.version) {
+              if (tag.name.substr(1) === bsPackage.packageDotJsonSpecifiedPackage.version) {
                 bsPackage.upgradeTagIndex = index;
                 bsPackage.packageVersionSelector = PackageVersionSelectorType.Tag;
                 return;
@@ -255,7 +250,7 @@ class App extends React.Component<any, object> {
 
     const tags: string[] = [];
     splitTags.forEach((tag) => {
-      if (tag !== '') {
+      if (tag !== '' && semver.valid(tag)) {
         tags.push(tag);
       }
     });
