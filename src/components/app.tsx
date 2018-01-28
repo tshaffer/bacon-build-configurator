@@ -36,6 +36,7 @@ import {
   SpecifiedBsPackage,
   // SpecifiedBsPackageMap,
 } from '../interfaces';
+import {match} from "minimatch";
 
 class App extends React.Component<any, object> {
 
@@ -93,9 +94,9 @@ class App extends React.Component<any, object> {
 
       // perform git fetch on the branch so that all the tags are local
       const gitFetchCmd: string = shell.exec('git fetch').stdout;
-
       const bsTags: BsTag[] = this.getTags();
 
+      // get the branches for his package
       // this.getBranches();
 
       const currentVersion = this.getPackageCurrentVersion(bsTags);
@@ -164,14 +165,14 @@ class App extends React.Component<any, object> {
 
       // get the last n commits on the current branch for this package
       // currentBranch=$(git branch | grep \* | cut -d ' ' -f2)
-      let currentBranch: string = '';
-      const rawBranches: string = shell.exec('git branch').stdout;
-      const branches: string[] = rawBranches.split('\n');
-      branches.forEach((branchName) => {
-        if (branchName.startsWith('* ')) {
-          currentBranch = branchName.substring(2);
-        }
-      });
+      // let currentBranch: string = '';
+      // const rawBranches: string = shell.exec('git branch').stdout;
+      // const branches: string[] = rawBranches.split('\n');
+      // branches.forEach((branchName) => {
+      //   if (branchName.startsWith('* ')) {
+      //     currentBranch = branchName.substring(2);
+      //   }
+      // });
       // console.log('currentBranch: ', currentBranch);
 
       // git log -$numCommits
@@ -239,7 +240,6 @@ class App extends React.Component<any, object> {
   // get all tags for the active branch
   //    tag name
   //    commitMessage
-
   getTags() {
 
     const rawTags: any = shell.exec('git tag');
@@ -329,14 +329,6 @@ class App extends React.Component<any, object> {
         shell.cd(packagePath);
         shell.pwd();
 
-        // TODO - it may be necessary to perform 'git fetch' for each branch to get the latest info (tags at least)
-        // TODO - if that is done, then this 'git fetch' can be eliminated
-        let gitFetchOutput: string = '';
-        if (bsPackage.packageVersionSelector !== PackageVersionSelectorType.Current) {
-          gitFetchOutput = shell.exec('git fetch').stdout;
-        }
-        console.log('gitFetchOutput: ', gitFetchOutput);
-
         switch (bsPackage.packageVersionSelector) {
           case PackageVersionSelectorType.Tag: {
             const bsTag: BsTag = bsPackage.tags[bsPackage.selectedTagIndex];
@@ -410,15 +402,6 @@ class App extends React.Component<any, object> {
     return tagOptions;
   }
 
-  getCompatiblePackageDotJsonVersion(bsPackage: BsPackage): string {
-
-    if (!isNil(bsPackage.tagIndexForPackageDotJsonPackageVersion)) {
-      const bsTag = bsPackage.tags[bsPackage.tagIndexForPackageDotJsonPackageVersion];
-      return bsTag.name;
-    }
-    return '';
-  }
-
   buildPackageRow(bsPackage: BsPackage) {
 
     const tagOptions: any = this.buildTagOptions(bsPackage);
@@ -427,21 +410,18 @@ class App extends React.Component<any, object> {
 
     let tagValue = bsPackage.name + ':' + bsPackage.selectedTagIndex.toString();
 
-    let compatiblePackageDotJsonVersion: string = this.getCompatiblePackageDotJsonVersion(bsPackage);
-    const disabled: boolean = compatiblePackageDotJsonVersion === '';
-    if (disabled) {
-      compatiblePackageDotJsonVersion = 'n/a';
-    }
-
     let comparisonColor: string;
+    let status: string;
     let defaultSelectedPackage = bsPackage.name + ':' + PackageVersionSelectorType.Current;
     switch (bsPackage.versionComparison) {
       case PackageVersionComparisonType.VersionsEqual: {
         comparisonColor = 'green';
+        status = 'No action required';
         break;
       }
       case PackageVersionComparisonType.CurrentNewer: {
         comparisonColor = 'gold';
+        status = 'Current version newer';
         break;
       }
       default:
@@ -450,15 +430,21 @@ class App extends React.Component<any, object> {
         comparisonColor = 'red';
 
         // find matching tag
+        let matchingTagFound = false;
         const tags = bsPackage.tags;
         tags.forEach( (tag, index) => {
           const tagName = tag.name;
           if (tagName.substr(1) === bsPackage.packageDotJsonSpecifiedPackage.version) {
             tagValue = bsPackage.name + ':' + index.toString();
             defaultSelectedPackage = bsPackage.name + ':' + PackageVersionSelectorType.Tag;
+            status = 'Update to matching';
+            matchingTagFound = true;
             return;
           }
         });
+        if (!matchingTagFound) {
+          status = '** Caution **';
+        }
         break;
       }
     }
@@ -470,6 +456,9 @@ class App extends React.Component<any, object> {
             color: comparisonColor,
           }}>
           {bsPackage.name}
+        </TableRowColumn>
+        <TableRowColumn>
+          {status}
         </TableRowColumn>
         <TableRowColumn>
           {bsPackage.currentVersion}
@@ -488,11 +477,6 @@ class App extends React.Component<any, object> {
               label='Current'
             />
             <RadioButton
-              value={bsPackage.name + ':' + PackageVersionSelectorType.PackageDotJsonVersion}
-              label='Compatible'
-              disabled={disabled}
-            />
-            <RadioButton
               value={bsPackage.name + ':' + PackageVersionSelectorType.Tag}
               label='Tag'
             />
@@ -505,9 +489,6 @@ class App extends React.Component<any, object> {
               label='Branch'
             />
           </RadioButtonGroup>
-        </TableRowColumn>
-        <TableRowColumn>
-          {compatiblePackageDotJsonVersion}
         </TableRowColumn>
         <TableRowColumn>
           <SelectField
@@ -568,10 +549,10 @@ class App extends React.Component<any, object> {
             >
               <TableRow>
                 <TableHeaderColumn>Package name</TableHeaderColumn>
+                <TableHeaderColumn></TableHeaderColumn>
                 <TableHeaderColumn>Current version</TableHeaderColumn>
-                <TableHeaderColumn>Package.json version</TableHeaderColumn>
+                <TableHeaderColumn>Specified version</TableHeaderColumn>
                 <TableHeaderColumn>Package Version Selector</TableHeaderColumn>
-                <TableHeaderColumn>Compatible Version</TableHeaderColumn>
                 <TableHeaderColumn>Tags</TableHeaderColumn>
                 <TableHeaderColumn>Commit Hash</TableHeaderColumn>
                 <TableHeaderColumn>Branch</TableHeaderColumn>
