@@ -36,12 +36,9 @@ import {
   SpecifiedBsPackage,
   // SpecifiedBsPackageMap,
 } from '../interfaces';
-import {match} from "minimatch";
 
 class App extends React.Component<any, object> {
 
-  // packageBaseDir: string = '/Users/tedshaffer/Documents/Projects/bacon-comp/';
-  // packageBaseDir: string = '/Users/tedshaffer/Documents/AltProjects/bacon-comp/';
   packageBaseDir: string = '/Users/tedshaffer/Documents/bacon-comp/';
   packageNames: string[] = [];
 
@@ -253,6 +250,9 @@ class App extends React.Component<any, object> {
       }
     });
 
+    // sort tags
+    tags.sort(semver.rcompare);
+
     const bsTags: BsTag[] = [];
 
     tags.forEach((tag) => {
@@ -411,6 +411,7 @@ class App extends React.Component<any, object> {
     let tagValue = bsPackage.name + ':' + bsPackage.selectedTagIndex.toString();
 
     let comparisonColor: string;
+    let statusColor: string = 'black';
     let status: string;
     let defaultSelectedPackage = bsPackage.name + ':' + PackageVersionSelectorType.Current;
     switch (bsPackage.versionComparison) {
@@ -437,13 +438,15 @@ class App extends React.Component<any, object> {
           if (tagName.substr(1) === bsPackage.packageDotJsonSpecifiedPackage.version) {
             tagValue = bsPackage.name + ':' + index.toString();
             defaultSelectedPackage = bsPackage.name + ':' + PackageVersionSelectorType.Tag;
-            status = 'Update to matching';
+            status = 'Update selected';
+            statusColor = 'green';
             matchingTagFound = true;
             return;
           }
         });
         if (!matchingTagFound) {
           status = '** Caution **';
+          statusColor = 'red';
         }
         break;
       }
@@ -457,7 +460,10 @@ class App extends React.Component<any, object> {
           }}>
           {bsPackage.name}
         </TableRowColumn>
-        <TableRowColumn>
+        <TableRowColumn
+          style={{
+            color: statusColor,
+          }}>
           {status}
         </TableRowColumn>
         <TableRowColumn>
